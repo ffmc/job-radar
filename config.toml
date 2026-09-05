@@ -1,0 +1,34 @@
+regions = ["worldwide", "europe", "americas-europe"]
+
+[titles]
+include = [
+  "analytics engineer",
+  "business intelligence",
+  "\\bbi\\b",
+  "data analyst",
+  "data & analytics",
+  "data and analytics",
+  "analytics (manager|lead|specialist|consultant|developer)",
+  "semantic",
+  "data solutions",
+  "solutions? (engineer|architect|consultant)",
+  "forward deployed",
+  "data platform",
+  "data engineer",
+  "tableau",
+  "power ?bi",
+  "looker",
+  "\\bdbt\\b",
+]
+exclude = [
+  "\\bintern\\b",
+  "internship",
+  "working student",
+  "apprentice",
+  "\\bsales\\b",
+  "account executive",
+  "recruiter",
+  "marketing manager",
+  "customer success manager",
+  "support (agent|specialist)",
+]
