@@ -17,3 +17,18 @@ class TitleFilter:
 
     def matches(self, title):
         return bool(self.include.search(title)) and not self.exclude.search(title)
+
+
+class LocationFilter:
+    """Locations are free text from each board, so this is a string rule and
+    never proof of work eligibility - the posting itself decides."""
+
+    def __init__(self, config):
+        rules = config["locations"]
+        self.include = re.compile("|".join(rules["include"]), re.I)
+        self.exclude = re.compile("|".join(rules["exclude"]), re.I)
+
+    def matches(self, location):
+        if not location:
+            return False
+        return bool(self.include.search(location)) and not self.exclude.search(location)

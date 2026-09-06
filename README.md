@@ -36,6 +36,12 @@ Teamtailor, BambooHR, Rippling, Workday.
      where p.closed_at is null and p.location ~* 'spain|madrid|barcelona'
      order by p.first_seen_at desc;
 
-## Filter
+## Filters
 
-Title include/exclude patterns live in `config.toml`. Only matching roles are stored.
+Both live in `config.toml`; only postings passing both are stored.
+
+- `[titles]` — data/BI/solutions roles.
+- `[locations]` — Europe only. The company regions on remoteintech describe where a company
+  hires in general, not where a given job is, so US and APAC roles arrive on European-tagged
+  boards and are dropped here. Locations are free text from each board, so these are string
+  rules and never proof of work eligibility.

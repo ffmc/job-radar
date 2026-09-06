@@ -32,3 +32,44 @@ exclude = [
   "customer success manager",
   "support (agent|specialist)",
 ]
+
+# Applied at ingestion: a posting whose location matches none of `include`,
+# or matches any of `exclude`, is never stored. Locations are free text from
+# each board, so these are string rules, not a guarantee of work eligibility.
+[locations]
+include = [
+  "spain", "madrid", "barcelona", "málaga", "malaga", "valencia", "sevilla",
+  "portugal", "lisbon", "lisboa", "porto",
+  "europe", "emea",
+  "united kingdom", "\\buk\\b", "london", "manchester", "edinburgh",
+  "ireland", "dublin", "cork",
+  "germany", "berlin", "munich", "münchen", "frankfurt", "hamburg", "cologne",
+  "france", "paris", "lyon",
+  "italy", "milan", "rome", "chiavari",
+  "netherlands", "amsterdam", "utrecht",
+  "belgium", "brussels", "austria", "vienna", "switzerland", "zurich", "geneva",
+  "sweden", "stockholm", "norway", "oslo", "denmark", "copenhagen",
+  "finland", "helsinki", "estonia", "tallinn", "lithuania", "latvia",
+  "poland", "warsaw", "warszawa", "krakow", "kraków", "wroclaw", "gliwice",
+  "czech", "prague", "brno", "slovakia", "hungary", "budapest",
+  "romania", "bucharest", "bulgaria", "sofia", "greece", "athens",
+  "croatia", "serbia", "belgrade", "slovenia", "ljubljana",
+  "remote", "anywhere", "worldwide", "distributed", "home based",
+]
+exclude = [
+  "only\\)", "ONLY",
+  "united states", "\\busa\\b", "\\bu\\.s\\b", "remote - us", "us-", "\\bus\\b",
+  "canada", "toronto", "vancouver", "montreal",
+  "new york", "san francisco", "seattle", "boston", "chicago", "denver",
+  "atlanta", "austin", "bellevue", "california", "texas", "illinois",
+  "minnesota", "michigan", "wisconsin", "georgia", "washington", "raleigh",
+  "mexico", "colombia", "brazil", "brasil", "são paulo", "sao paulo",
+  "argentina", "chile", "peru", "costa rica", "latam",
+  "india", "bengaluru", "bangalore", "hyderabad", "gurgaon", "mumbai", "delhi",
+  "singapore", "japan", "tokyo", "korea", "china", "hong kong",
+  "australia", "sydney", "melbourne", "new zealand",
+  "israel", "\\buae\\b", "\\bksa\\b", "dubai", "south africa", "nigeria", "kenya", "egypt",
+  "apac", "amer\\b", "americas",
+  "\\bnyc\\b", "\\bny\\b", "\\bsf\\b", "\\bla\\b", "\\bdc\\b", "\\bchi\\b",
+  "\\bca\\b", "\\bwa\\b", "\\bnj\\b", "\\bma\\b", "\\bco\\b", "\\btx\\b", "\\bil\\b",
+]
