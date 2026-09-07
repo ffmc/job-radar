@@ -3,8 +3,11 @@ import re
 from urllib.parse import urljoin, urlparse
 
 from .boards import fetch_jobs
-from .net import fetch, fetch_json, post_json
+from .net import MAX_BODY, fetch, fetch_json, post_json
 from .resolve_patterns import BAD_TOKENS, PATTERNS, LINK_HINT, LINK_RE
+
+
+PROBE = {"timeout": 10, "attempts": 1}
 
 
 def _norm(s):
@@ -26,6 +29,7 @@ def _plausible(token, company):
 
 
 def _scan(text, company, trusted):
+    text = text[:MAX_BODY]
     for ats, pattern in PATTERNS:
         for m in re.finditer(pattern, text, re.I):
             token = "|".join(g for g in m.groups() if g) if m.groups() else None
@@ -51,7 +55,9 @@ def _probe_slug(company):
             continue
         seen.add(cand)
         try:
-            if fetch_json(f"https://boards-api.greenhouse.io/v1/boards/{cand}/jobs").get("jobs"):
+            if fetch_json(
+                f"https://boards-api.greenhouse.io/v1/boards/{cand}/jobs", **PROBE
+            ).get("jobs"):
                 return "greenhouse", cand
         except Exception:
             pass
@@ -67,6 +73,7 @@ def _probe_slug(company):
                     ),
                     "variables": {"organizationHostedJobsPageName": cand},
                 },
+                **PROBE,
             )
             board = (d.get("data") or {}).get("jobBoard") or {}
             if board.get("jobPostings"):
@@ -75,7 +82,7 @@ def _probe_slug(company):
             pass
         for host in ("api.lever.co", "api.eu.lever.co"):
             try:
-                if fetch_json(f"https://{host}/v0/postings/{cand}?mode=json"):
+                if fetch_json(f"https://{host}/v0/postings/{cand}?mode=json", **PROBE):
                     return "lever", cand
             except Exception:
                 pass

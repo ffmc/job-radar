@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from . import db
 from .boards import fetch_jobs
 from .companies import scrape
-from .filters import TitleFilter, load_config
+from .filters import LocationFilter, TitleFilter, load_config
 from .resolve import resolve
 
 
@@ -44,6 +44,7 @@ def cmd_resolve(args):
 def cmd_crawl(args):
     config = load_config()
     title_filter = TitleFilter(config)
+    location_filter = LocationFilter(config)
 
     with db.connect() as conn:
         companies = db.resolved_companies(conn)
@@ -65,7 +66,10 @@ def cmd_crawl(args):
                 errors[company["name"]] = error
                 continue
             ok_ids.append(company["id"])
-            kept = [j for j in jobs if title_filter.matches(j["title"])]
+            kept = [
+                j for j in jobs
+                if title_filter.matches(j["title"]) and location_filter.matches(j["location"])
+            ]
             seen += len(kept)
             new += db.upsert_postings(conn, company["id"], kept)
 

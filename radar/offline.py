@@ -1,12 +1,18 @@
 """Run the crawl without a database connection, emitting JSON for external loading."""
 
 import json
+import multiprocessing
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 from .boards import fetch_jobs
 from .companies import scrape
-from .filters import TitleFilter, load_config
+from .filters import LocationFilter, TitleFilter, load_config
 from .resolve import resolve
+
+# A hung DNS lookup cannot be interrupted in a thread, so resolution runs in
+# processes that can be killed when they overrun.
+PER_COMPANY_TIMEOUT = 90
 
 
 def resolve_all(path, limit=None, workers=12):
@@ -14,10 +20,23 @@ def resolve_all(path, limit=None, workers=12):
     companies = scrape(config["regions"])
     if limit:
         companies = companies[:limit]
-    with ThreadPoolExecutor(max_workers=workers) as ex:
-        pairs = list(ex.map(resolve, companies))
-    for company, (ats, token) in zip(companies, pairs):
-        company["ats"], company["token"] = ats, token
+    started = time.time()
+    pool = multiprocessing.Pool(processes=workers)
+    pending = [(c, pool.apply_async(resolve, (c,))) for c in companies]
+    for done, (company, result) in enumerate(pending, start=1):
+        try:
+            company["ats"], company["token"] = result.get(timeout=PER_COMPANY_TIMEOUT)
+        except Exception:
+            company["ats"], company["token"] = None, None
+        if done % 25 == 0 or done == len(companies):
+            hits = sum(1 for c in companies if c.get("ats"))
+            print(
+                f"  {done}/{len(companies)} companies, {hits} resolved, "
+                f"{time.time() - started:.0f}s",
+                flush=True,
+            )
+    pool.terminate()
+    pool.join()
     with open(path, "w") as f:
         json.dump(companies, f, indent=1)
     print(f"{sum(1 for c in companies if c['ats'])}/{len(companies)} resolved -> {path}")
@@ -25,7 +44,9 @@ def resolve_all(path, limit=None, workers=12):
 
 
 def crawl_all(companies_path, path, workers=16):
-    title_filter = TitleFilter(load_config())
+    config = load_config()
+    title_filter = TitleFilter(config)
+    location_filter = LocationFilter(config)
     with open(companies_path) as f:
         companies = [c for c in json.load(f) if c.get("ats") and c.get("token")]
 
@@ -44,7 +65,7 @@ def crawl_all(companies_path, path, workers=16):
             errors[company["slug"]] = error
             continue
         for job in jobs:
-            if title_filter.matches(job["title"]):
+            if title_filter.matches(job["title"]) and location_filter.matches(job["location"]):
                 out.append(dict(job, slug=company["slug"], posted_at=str(job["posted_at"] or "") or None))
     with open(path, "w") as f:
         json.dump({"postings": out, "errors": errors}, f, indent=1)
