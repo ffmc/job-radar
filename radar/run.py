@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from . import db
 from .boards import fetch_jobs
 from .companies import scrape
-from .filters import LocationFilter, TitleFilter, load_config
+from .filters import AgeFilter, LocationFilter, TitleFilter, load_config
 from .resolve import resolve
 
 
@@ -45,6 +45,7 @@ def cmd_crawl(args):
     config = load_config()
     title_filter = TitleFilter(config)
     location_filter = LocationFilter(config)
+    age_filter = AgeFilter(config)
 
     with db.connect() as conn:
         companies = db.resolved_companies(conn)
@@ -68,18 +69,24 @@ def cmd_crawl(args):
             ok_ids.append(company["id"])
             kept = [
                 j for j in jobs
-                if title_filter.matches(j["title"]) and location_filter.matches(j["location"])
+                if title_filter.matches(j["title"])
+                and location_filter.matches(j["location"])
+                and age_filter.matches(j["posted_at"])
             ]
             seen += len(kept)
             new += db.upsert_postings(conn, company["id"], kept)
 
         closed = db.close_stale(conn, ok_ids, run_started)
+        purged = db.purge_stale(
+            conn, config["freshness"]["max_age_days"], config["freshness"]["keep_undated"]
+        )
         average = db.recent_average_seen(conn)
         db.finish_run(conn, run_id, len(ok_ids), seen, new, errors)
 
         print(
             f"run {run_id}: {len(ok_ids)}/{len(companies)} boards ok, "
-            f"{seen} matching postings, {new} new, {closed} closed, {len(errors)} errors"
+            f"{seen} matching postings, {new} new, {closed} closed, "
+            f"{purged} aged out, {len(errors)} errors"
         )
         if average and seen < average * 0.5:
             print(

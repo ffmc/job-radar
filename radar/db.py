@@ -111,6 +111,24 @@ def close_stale(conn, company_ids, run_started):
     ).rowcount
 
 
+def purge_stale(conn, max_age_days, keep_undated):
+    """Postings age out of the table entirely - a role too old to apply for is noise.
+    Boards that expose no date are aged from when this crawler first saw them."""
+    undated = (
+        "(posted_at is null and first_seen_at < now() - make_interval(days => %(days)s))"
+        if keep_undated
+        else "posted_at is null"
+    )
+    return conn.execute(
+        f"""
+        delete from postings
+         where (posted_at is not null and posted_at < current_date - %(days)s)
+            or {undated}
+        """,
+        {"days": max_age_days},
+    ).rowcount
+
+
 def start_run(conn):
     return conn.execute("insert into runs (started_at) values (now()) returning id").fetchone()["id"]
 

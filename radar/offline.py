@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from .boards import fetch_jobs
 from .companies import scrape
-from .filters import LocationFilter, TitleFilter, load_config
+from .filters import AgeFilter, LocationFilter, TitleFilter, load_config
 from .resolve import resolve
 
 # A hung DNS lookup cannot be interrupted in a thread, so resolution runs in
@@ -47,6 +47,7 @@ def crawl_all(companies_path, path, workers=16):
     config = load_config()
     title_filter = TitleFilter(config)
     location_filter = LocationFilter(config)
+    age_filter = AgeFilter(config)
     with open(companies_path) as f:
         companies = [c for c in json.load(f) if c.get("ats") and c.get("token")]
 
@@ -65,7 +66,9 @@ def crawl_all(companies_path, path, workers=16):
             errors[company["slug"]] = error
             continue
         for job in jobs:
-            if title_filter.matches(job["title"]) and location_filter.matches(job["location"]):
+            if (title_filter.matches(job["title"])
+                    and location_filter.matches(job["location"])
+                    and age_filter.matches(job["posted_at"])):
                 out.append(dict(job, slug=company["slug"], posted_at=str(job["posted_at"] or "") or None))
     with open(path, "w") as f:
         json.dump({"postings": out, "errors": errors}, f, indent=1)

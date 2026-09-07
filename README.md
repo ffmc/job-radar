@@ -41,6 +41,10 @@ Teamtailor, BambooHR, Rippling, Workday.
 Both live in `config.toml`; only postings passing both are stored.
 
 - `[titles]` — data/BI/solutions roles.
+- `[freshness]` — nothing older than 20 days. Old rows are also deleted from the table on
+  every run, so the table only ever holds roles still worth applying for. Workday, BambooHR
+  and Rippling expose no posting date; those are aged from when the crawler first saw them
+  (`keep_undated = false` drops them instead).
 - `[locations]` — Europe only. The company regions on remoteintech describe where a company
   hires in general, not where a given job is, so US and APAC roles arrive on European-tagged
   boards and are dropped here. Locations are free text from each board, so these are string
