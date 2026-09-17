@@ -9,7 +9,11 @@ def connect():
     url = os.environ.get("SUPABASE_DB_URL")
     if not url:
         raise RuntimeError("SUPABASE_DB_URL is not set")
-    return psycopg.connect(url, row_factory=dict_row, autocommit=True)
+    # prepare_threshold=None: the Supabase pooler runs pgbouncer in transaction
+    # mode, which routes each transaction to a different backend, so server-side
+    # prepared statements (psycopg's default) don't survive - "prepared statement
+    # already exists" errors otherwise.
+    return psycopg.connect(url, row_factory=dict_row, autocommit=True, prepare_threshold=None)
 
 
 def apply_schema(conn, path="schema.sql"):
