@@ -5,3 +5,4 @@ __pycache__/
 resolve.log
 companies_resolved.json
 postings.json
+postings.html

@@ -1,6 +1,7 @@
 import html
 import re
 
+from . import target_companies
 from .net import fetch
 
 LIST_URL = "https://remoteintech.company/companies/"
@@ -32,3 +33,8 @@ def scrape(regions=None):
     if not out:
         raise RuntimeError("company list parsed to zero rows - page markup changed")
     return out
+
+
+def all_companies(regions=None):
+    """remoteintech.company plus the manually-curated tool-vendor list."""
+    return scrape(regions) + target_companies.load()

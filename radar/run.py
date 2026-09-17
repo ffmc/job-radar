@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from . import db
 from .boards import fetch_jobs
-from .companies import scrape
+from .companies import all_companies
 from .filters import AgeFilter, LocationFilter, TitleFilter, load_config
 from .resolve import resolve
 
@@ -13,7 +13,7 @@ from .resolve import resolve
 def cmd_init(args):
     with db.connect() as conn:
         db.apply_schema(conn)
-        rows = scrape(load_config()["regions"])
+        rows = all_companies(load_config()["regions"])
         db.upsert_companies(conn, rows)
         print(f"schema applied, {len(rows)} companies upserted")
 
@@ -21,7 +21,7 @@ def cmd_init(args):
 def cmd_resolve(args):
     if args.dry_run:
         companies = [
-            dict(c, id=None) for c in scrape(load_config()["regions"])[: args.limit or 20]
+            dict(c, id=None) for c in all_companies(load_config()["regions"])[: args.limit or 20]
         ]
         hits = 0
         for c in companies:
@@ -106,9 +106,14 @@ def main():
     parser.add_argument("--offline-resolve", metavar="PATH", help="resolve to a JSON file, no database")
     parser.add_argument("--offline-crawl", nargs=2, metavar=("COMPANIES", "OUT"),
                         help="crawl from a resolved JSON file into a JSON file, no database")
+    parser.add_argument("--report", metavar="PATH", nargs="?", const="postings.html",
+                        help="write open postings to a static HTML file (default postings.html)")
     args = parser.parse_args()
 
-    if args.offline_resolve:
+    if args.report:
+        from .report import main as report_main
+        report_main(args.report)
+    elif args.offline_resolve:
         from .offline import resolve_all
         resolve_all(args.offline_resolve, args.limit)
     elif args.offline_crawl:

@@ -6,7 +6,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 from .boards import fetch_jobs
-from .companies import scrape
+from .companies import all_companies
 from .filters import AgeFilter, LocationFilter, TitleFilter, load_config
 from .resolve import resolve
 
@@ -17,7 +17,7 @@ PER_COMPANY_TIMEOUT = 90
 
 def resolve_all(path, limit=None, workers=12):
     config = load_config()
-    companies = scrape(config["regions"])
+    companies = all_companies(config["regions"])
     if limit:
         companies = companies[:limit]
     started = time.time()

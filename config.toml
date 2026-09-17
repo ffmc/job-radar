@@ -1,11 +1,11 @@
+regions = ["worldwide", "europe", "americas-europe"]
+
 # A posting older than this is never stored, and is deleted on the next run.
 # Boards that expose no posting date (Workday, BambooHR, Rippling) are aged from
 # when this crawler first saw them - set keep_undated = false to drop them instead.
 [freshness]
 max_age_days = 20
 keep_undated = true
-
-regions = ["worldwide", "europe", "americas-europe"]
 
 [titles]
 include = [

@@ -144,6 +144,17 @@ def finish_run(conn, run_id, queried, seen, new, errors):
     )
 
 
+def open_postings(conn):
+    return conn.execute(
+        """
+        select c.name as company, p.title, p.location, p.url, p.posted_at, p.first_seen_at
+          from postings p join companies c on c.id = p.company_id
+         where p.closed_at is null
+         order by p.first_seen_at desc
+        """
+    ).fetchall()
+
+
 def recent_average_seen(conn, days=7):
     row = conn.execute(
         """
