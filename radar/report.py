@@ -1,8 +1,21 @@
 """Static HTML view of open postings - an alternative to querying Postgres by hand."""
 import html
+import re
 from datetime import datetime, timedelta, timezone
 
 NEW_WINDOW = timedelta(days=1)
+REMOTE_RE = re.compile(r"\bremote\b|\banywhere\b|\bworldwide\b|home.?based|distributed", re.I)
+HYBRID_RE = re.compile(r"\bhybrid\b", re.I)
+
+
+def _work_mode(location):
+    if not location:
+        return ""
+    if HYBRID_RE.search(location):
+        return "Hybrid"
+    if REMOTE_RE.search(location):
+        return "Remote"
+    return ""
 
 
 def render_html(rows, generated_at=None):
@@ -15,11 +28,13 @@ def render_html(rows, generated_at=None):
     trs = []
     for r in rows:
         is_new = r["first_seen_at"] and r["first_seen_at"] > new_cutoff
+        mode = _work_mode(r["location"])
         trs.append(
             f"""<tr class="{'new' if is_new else ''}">
   <td>{esc(r['company'])}</td>
   <td><a href="{esc(r['url'])}" target="_blank" rel="noopener">{esc(r['title'])}</a></td>
   <td>{esc(r['location'])}</td>
+  <td>{f'<span class="mode {mode.lower()}">{mode}</span>' if mode else ''}</td>
   <td>{esc(r['posted_at'] or '')}</td>
 </tr>"""
         )
@@ -38,12 +53,15 @@ def render_html(rows, generated_at=None):
   tr.new td {{ background: #16321f; }}
   a {{ color: #7ab8ff; text-decoration: none; }}
   a:hover {{ text-decoration: underline; }}
+  .mode {{ font-size: .8rem; padding: .1rem .5rem; border-radius: 1rem; white-space: nowrap; }}
+  .mode.remote {{ background: #17324d; color: #7ab8ff; }}
+  .mode.hybrid {{ background: #3d2f14; color: #e0b354; }}
 </style>
 </head>
 <body>
 <h1>job-radar &mdash; {len(rows)} open postings, generated {generated_at.strftime('%Y-%m-%d %H:%M UTC')}</h1>
 <table>
-<tr><th>Company</th><th>Title</th><th>Location</th><th>Posted</th></tr>
+<tr><th>Company</th><th>Title</th><th>Location</th><th>Mode</th><th>Posted</th></tr>
 {''.join(trs)}
 </table>
 </body>
