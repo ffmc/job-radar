@@ -22,18 +22,22 @@ def apply_schema(conn, path="schema.sql"):
 
 
 def upsert_companies(conn, rows):
+    # Looped execute(), not executemany(): executemany() always runs through
+    # psycopg's pipeline mode, which forces server-side prepared statements
+    # regardless of prepare_threshold - incompatible with the pooler.
     with conn.cursor() as cur:
-        cur.executemany(
-            """
-            insert into companies (slug, name, region, careers_url)
-            values (%(slug)s, %(name)s, %(region)s, %(careers_url)s)
-            on conflict (slug) do update
-              set name = excluded.name,
-                  region = excluded.region,
-                  careers_url = excluded.careers_url
-            """,
-            rows,
-        )
+        for row in rows:
+            cur.execute(
+                """
+                insert into companies (slug, name, region, careers_url)
+                values (%(slug)s, %(name)s, %(region)s, %(careers_url)s)
+                on conflict (slug) do update
+                  set name = excluded.name,
+                      region = excluded.region,
+                      careers_url = excluded.careers_url
+                """,
+                row,
+            )
 
 
 def companies_to_resolve(conn, limit=None, only_unresolved=True):
@@ -71,32 +75,28 @@ def upsert_postings(conn, company_id, jobs):
     """Returns the number of rows that were newly inserted."""
     if not jobs:
         return 0
-    rows = [dict(j, company_id=company_id) for j in jobs]
+    inserted = 0
     with conn.cursor() as cur:
-        cur.executemany(
-            """
-            insert into postings
-                (company_id, ats_job_id, title, location, url, posted_at)
-            values
-                (%(company_id)s, %(ats_job_id)s, %(title)s, %(location)s, %(url)s, %(posted_at)s)
-            on conflict (company_id, ats_job_id) do update
-              set last_seen_at = now(),
-                  title = excluded.title,
-                  location = excluded.location,
-                  url = excluded.url,
-                  closed_at = null
-            returning (xmax = 0) as inserted
-            """,
-            rows,
-            returning=True,
-        )
-        inserted = 0
-        while True:
+        for j in jobs:
+            cur.execute(
+                """
+                insert into postings
+                    (company_id, ats_job_id, title, location, url, posted_at)
+                values
+                    (%(company_id)s, %(ats_job_id)s, %(title)s, %(location)s, %(url)s, %(posted_at)s)
+                on conflict (company_id, ats_job_id) do update
+                  set last_seen_at = now(),
+                      title = excluded.title,
+                      location = excluded.location,
+                      url = excluded.url,
+                      closed_at = null
+                returning (xmax = 0) as inserted
+                """,
+                dict(j, company_id=company_id),
+            )
             row = cur.fetchone()
             if row and row["inserted"]:
                 inserted += 1
-            if not cur.nextset():
-                break
     return inserted
 
 
