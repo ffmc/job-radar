@@ -23,7 +23,7 @@ jobs:
       - run: python -m radar.run --init
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      - run: python -m radar.run --resolve
+      - run: python -m radar.run --resolve --limit 40
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       - run: python -m radar.run

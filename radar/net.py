@@ -31,6 +31,12 @@ def fetch(url, timeout=20, data=None, content_type=None, attempts=3):
             last = e
             if e.code not in RETRY_STATUS:
                 raise
+        except urllib.error.URLError as e:
+            last = e
+            # DNS failure or refused connection won't fix itself on retry -
+            # a dead career site shouldn't eat 3x the timeout budget.
+            if isinstance(e.reason, (socket.gaierror, ConnectionRefusedError)):
+                raise
         except Exception as e:
             last = e
         time.sleep(1.5 * (i + 1))
