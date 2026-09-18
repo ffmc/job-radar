@@ -40,6 +40,20 @@ def upsert_companies(conn, rows):
             )
 
 
+def upsert_company(conn, slug, name, ats):
+    """Single-row upsert for a company discovered mid-crawl (e.g. from an
+    aggregator feed), unlike the batch upsert_companies() used at --init."""
+    return conn.execute(
+        """
+        insert into companies (slug, name, ats)
+        values (%s, %s, %s)
+        on conflict (slug) do update set name = excluded.name
+        returning id
+        """,
+        (slug, name, ats),
+    ).fetchone()["id"]
+
+
 def companies_to_resolve(conn, limit=None, only_unresolved=True):
     sql = "select id, slug, name, careers_url from companies"
     if only_unresolved:

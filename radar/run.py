@@ -3,7 +3,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
-from . import db
+from . import db, himalayas
 from .boards import fetch_jobs
 from .companies import all_companies
 from .filters import AgeFilter, LocationFilter, TitleFilter, load_config
@@ -76,6 +76,23 @@ def cmd_crawl(args):
             seen += len(kept)
             new += db.upsert_postings(conn, company["id"], kept)
 
+        try:
+            by_company = {}
+            for j in himalayas.fetch():
+                if (
+                    title_filter.matches(j["title"])
+                    and location_filter.matches(j["location"])
+                    and age_filter.matches(j["posted_at"])
+                ):
+                    by_company.setdefault(j["company_slug"], []).append(j)
+            for slug, jobs in by_company.items():
+                company_id = db.upsert_company(conn, f"himalayas:{slug}", jobs[0]["company_name"], "himalayas")
+                ok_ids.append(company_id)
+                seen += len(jobs)
+                new += db.upsert_postings(conn, company_id, jobs)
+        except Exception as e:
+            errors["himalayas"] = f"{type(e).__name__}: {e}"[:200]
+
         closed = db.close_stale(conn, ok_ids, run_started)
         purged = db.purge_stale(
             conn, config["freshness"]["max_age_days"], config["freshness"]["keep_undated"]
@@ -84,7 +101,8 @@ def cmd_crawl(args):
         db.finish_run(conn, run_id, len(ok_ids), seen, new, errors)
 
         print(
-            f"run {run_id}: {len(ok_ids)}/{len(companies)} boards ok, "
+            f"run {run_id}: {len(ok_ids) - len(by_company)}/{len(companies)} boards ok "
+            f"plus {len(by_company)} himalayas companies, "
             f"{seen} matching postings, {new} new, {closed} closed, "
             f"{purged} aged out, {len(errors)} errors"
         )
