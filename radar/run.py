@@ -1,6 +1,6 @@
 import argparse
 import sys
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
 from . import db, himalayas
@@ -34,11 +34,15 @@ def cmd_resolve(args):
     with db.connect() as conn:
         companies = db.companies_to_resolve(conn, args.limit, only_unresolved=not args.all)
         print(f"resolving {len(companies)} companies")
+        hits = 0
         with ThreadPoolExecutor(max_workers=12) as ex:
-            results = list(ex.map(lambda c: (c["id"], resolve(c)), companies))
-        for company_id, (ats, token) in results:
-            db.save_resolution(conn, company_id, ats, token)
-        print(f"resolved {sum(1 for _, (a, _t) in results if a)} of {len(companies)}")
+            futures = {ex.submit(resolve, c): c for c in companies}
+            for future in as_completed(futures):
+                company = futures[future]
+                ats, token = future.result()
+                db.save_resolution(conn, company["id"], ats, token)
+                hits += bool(ats)
+        print(f"resolved {hits} of {len(companies)}")
 
 
 def cmd_crawl(args):
